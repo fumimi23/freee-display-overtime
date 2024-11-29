@@ -1,0 +1,13 @@
+{
+  "name": "残業貯金",
+  "description": "1日の業務時間を8時間とした時に、現時点でどれくらいの業務時間の差分があるのかを表示する。",
+  "version": "1.0",
+  "manifest_version": 3,
+  "content_scripts": [
+    {
+      "matches": ["https://p.secure.freee.co.jp/*"],
+      "run_at": "document_end",
+      "js": ["main.js"]
+    }
+  ]
+}
