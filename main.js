@@ -18,7 +18,7 @@ const observer = new MutationObserver((mutations) => {
   const hour = parseInt(timeMatch[1], 10);
   const minute = parseInt(timeMatch[2], 10);
 
-  const { overTimeHours, remainingMinutes } = calculateOverTime(
+  const { overTimeHours, remainingMinutes, isNegative } = calculateOverTime(
     day,
     hour,
     minute
@@ -34,7 +34,7 @@ const observer = new MutationObserver((mutations) => {
     <div class="item">
       <div class="label">残業貯金</div>
       <div class="body">
-        ${overTimeHours}<span class="unit">時間</span>
+        ${isNegative ? '-' : ''}${overTimeHours}<span class="unit">時間</span>
         ${remainingMinutes}<span class="unit">分</span>
       </div>
     </div>
@@ -53,11 +53,13 @@ function calculateOverTime(day, hour, minute) {
 
   const overTimeMinutes = totalMinutesWorked - standardMinutes;
 
+  const isNegative = overTimeMinutes < 0;
   const overTimeHours = Math.floor(Math.abs(overTimeMinutes) / 60);
   const remainingMinutes = Math.abs(overTimeMinutes) % 60;
 
   return {
     overTimeHours,
     remainingMinutes,
+    isNegative,
   };
 }
