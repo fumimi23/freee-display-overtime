@@ -1,22 +1,22 @@
 // MutationObserverを使って動的に生成される要素を監視
-const observer = new MutationObserver((mutations) => {
+const observer = new MutationObserver(() => {
   const target = document.querySelector(".items.main-items");
   if (!target) return;
 
-  const items = target.querySelectorAll(".item");
-  if (items.length < 2) return;
+  const workDays = findValueByLabel(target, "労働日数");
+  const totalWork = findValueByLabel(target, "総勤務時間");
+  if (!workDays || !totalWork) return;
 
-  const firstItem = items[0].querySelector(".body");
-  const secondItem = items[1].querySelector(".body");
-  if (!firstItem || !secondItem) return;
+  const dayMatch = workDays.match(/\d+/);
+  if (!dayMatch) return;
 
-  const dayMatch = firstItem.textContent.match(/\d+/);
-  const timeMatch = secondItem.textContent.match(/(\d+)時間(\d+)分/);
-  if (!dayMatch || !timeMatch) return;
+  const hourMatch = totalWork.match(/(\d+)\s*時間/);
+  const minuteMatch = totalWork.match(/(\d+)\s*分/);
+  if (!hourMatch && !minuteMatch) return;
 
   const day = parseInt(dayMatch[0], 10);
-  const hour = parseInt(timeMatch[1], 10);
-  const minute = parseInt(timeMatch[2], 10);
+  const hour = hourMatch ? parseInt(hourMatch[1], 10) : 0;
+  const minute = minuteMatch ? parseInt(minuteMatch[1], 10) : 0;
 
   const { overTimeHours, remainingMinutes, isNegative } = calculateOverTime(
     day,
@@ -24,27 +24,48 @@ const observer = new MutationObserver((mutations) => {
     minute
   );
 
-  // 新しい要素が既に存在する場合は追加処理をスキップ
-  // これ消すと、ページが開けなくなっちゃった
-  if (target.querySelector(".overtime-item")) return;
+  const signature = `${isNegative ? "-" : ""}${overTimeHours}h${remainingMinutes}m`;
+  const existing = target.querySelector(".overtime-item");
 
-  const newItem = document.createElement("div");
-  newItem.classList.add("overtime-item");
-  newItem.innerHTML = `
+  if (existing && existing.dataset.signature === signature) return;
+
+  const html = `
     <div class="item">
       <div class="label">残業貯金</div>
       <div class="body">
-        ${isNegative ? '-' : ''}${overTimeHours}<span class="unit">時間</span>
+        ${isNegative ? "-" : ""}${overTimeHours}<span class="unit">時間</span>
         ${remainingMinutes}<span class="unit">分</span>
       </div>
     </div>
   `;
 
-  target.appendChild(newItem);
+  if (existing) {
+    existing.innerHTML = html;
+    existing.dataset.signature = signature;
+  } else {
+    const newItem = document.createElement("div");
+    newItem.classList.add("overtime-item");
+    newItem.dataset.signature = signature;
+    newItem.innerHTML = html;
+    target.appendChild(newItem);
+  }
 });
 
 // body以下の変更を監視
 observer.observe(document.body, { childList: true, subtree: true });
+
+function findValueByLabel(root, labelText) {
+  const items = root.querySelectorAll(".item");
+  for (const item of items) {
+    const label = item.querySelector(".label");
+    const body = item.querySelector(".body");
+    if (!label || !body) continue;
+    if (label.textContent.trim().startsWith(labelText)) {
+      return body.textContent;
+    }
+  }
+  return null;
+}
 
 function calculateOverTime(day, hour, minute) {
   const workHoursPerDay = 8;
